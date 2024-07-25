@@ -1,5 +1,12 @@
 import React from "react";
 
+import { RequestResults, ThrottleForm } from "./_components";
+
 export default function Home() {
-  return <main />;
+  return (
+    <main>
+      <ThrottleForm />
+      <RequestResults />
+    </main>
+  );
 }
