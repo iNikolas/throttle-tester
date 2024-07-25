@@ -4,15 +4,11 @@ import { useForm } from "effector-forms";
 import { useUnit } from "effector-react";
 import React from "react";
 
+import { REQUESTS_AMOUNT } from "@/config";
 import { throttleTesterModel } from "@/stores/throttle-tester";
 
 import { limits } from "./config";
 import { sanitizeRateLimitInput } from "./utils";
-
-const REQUESTS_AMOUNT = parseInt(
-  process.env.NEXT_PUBLIC_REQUESTS_AMOUNT ?? "",
-  10,
-);
 
 export function ThrottleForm() {
   const { fields, submit } = useForm(throttleTesterModel.form);

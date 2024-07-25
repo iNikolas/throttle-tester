@@ -1,12 +1,7 @@
 import { createEffect, Event } from "effector";
 
 import { executeThrottleRequest } from "@/api";
-
-const TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_TIMEOUT_MS ?? "", 10);
-
-if (Number.isNaN(TIMEOUT_MS)) {
-  throw new Error("NEXT_PUBLIC_TIMEOUT_MS env variable should be defined");
-}
+import { TIMEOUT_MS } from "@/config";
 
 export const executeThrottleRequestFx = createEffect(async (index: number) => {
   await executeThrottleRequest(index);

@@ -1,21 +1,23 @@
-import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
-import { v4 as uuidv4 } from "uuid";
+import { NextRequest, NextResponse } from "next/server";
 
-import { getEnvVar } from "@/utils";
+import { MAX_DELAY_MS, MIN_DELAY_MS } from "@/config";
 
-const CLIENT_ID_COOKIE_NAME = getEnvVar("CLIENT_ID_COOKIE_NAME");
+export async function post(req: NextRequest) {
+  const delay =
+    Math.floor(Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS + 1)) +
+    MIN_DELAY_MS;
+  await new Promise((resolve) => {
+    setTimeout(resolve, delay);
+  });
 
-export function signClientCookie(cookies: ReadonlyRequestCookies) {
-  const clientId = cookies.get(CLIENT_ID_COOKIE_NAME)?.value;
+  const { requestIndex } = await req.json();
 
-  if (!clientId) {
-    const newClientId = uuidv4();
-
-    cookies.set({
-      name: CLIENT_ID_COOKIE_NAME,
-      value: newClientId,
-      httpOnly: true,
-      secure: true,
-    });
+  if (!requestIndex) {
+    return NextResponse.json(
+      { error: "Request index is required." },
+      { status: 400 },
+    );
   }
+
+  return NextResponse.json({ index: requestIndex });
 }

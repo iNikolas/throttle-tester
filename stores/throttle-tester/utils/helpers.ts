@@ -1,14 +1,7 @@
 import { Event } from "effector";
+
+import { REQUESTS_AMOUNT } from "@/config";
 import { RequestResult } from "@/entities";
-
-const REQUESTS_AMOUNT = parseInt(
-  process.env.NEXT_PUBLIC_REQUESTS_AMOUNT ?? "",
-  10,
-);
-
-if (Number.isNaN(REQUESTS_AMOUNT)) {
-  throw new Error("REQUESTS_AMOUNT env variable should be defined");
-}
 
 export function buildInitialThrottleRequestParams({
   requestsSent,

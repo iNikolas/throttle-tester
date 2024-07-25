@@ -1,28 +1,19 @@
 import { combine, createEvent, createStore, sample } from "effector";
 import { createForm } from "effector-forms";
 
+import { REQUESTS_AMOUNT } from "@/config";
 import {
   executeThrottleRequestFx,
   executeThrottleRequestsFx,
-  showErrorMessageFx,
   showSuccessfullMessageFx,
 } from "@/effects";
-import { signClientWitCookieFx } from "@/effects/auth";
 import { RequestResult } from "@/entities";
+
 import {
   buildInitialThrottleRequestParams,
   buildRepeatThrottleRequestParams,
   buildResults,
 } from "./utils";
-
-const REQUESTS_AMOUNT = parseInt(
-  process.env.NEXT_PUBLIC_REQUESTS_AMOUNT ?? "",
-  10,
-);
-
-if (Number.isNaN(REQUESTS_AMOUNT)) {
-  throw new Error("REQUESTS_AMOUNT env variable should be defined");
-}
 
 const throttleTestInitiated = createEvent();
 const newRequestsSent = createEvent<{ amount: number }>();
@@ -44,19 +35,12 @@ $requestsSent.reset(form.formValidated);
 $concurrentRequests.reset(form.formValidated);
 $results.reset(form.formValidated);
 
-export const $loading = combine(
-  [signClientWitCookieFx.pending, executeThrottleRequestFx.pending],
-  (tuple) => tuple.some(Boolean),
+export const $loading = combine([executeThrottleRequestFx.pending], (tuple) =>
+  tuple.some(Boolean),
 );
 
 sample({
   clock: form.formValidated,
-  fn: ({ rateLimit }) => rateLimit,
-  target: signClientWitCookieFx,
-});
-
-sample({
-  clock: signClientWitCookieFx.doneData,
   target: throttleTestInitiated,
 });
 
@@ -125,11 +109,6 @@ sample({
   source: { results: $results },
   fn: ({ results }, { params }) => buildResults({ results }, { params }, true),
   target: $results,
-});
-
-sample({
-  clock: [signClientWitCookieFx.failData],
-  target: showErrorMessageFx,
 });
 
 sample({
