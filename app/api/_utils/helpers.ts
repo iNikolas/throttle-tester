@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { MAX_DELAY_MS, MIN_DELAY_MS } from "@/config";
+import { MAX_DELAY_MS, MIN_DELAY_MS } from "@/config/env-server";
 
 export async function post(req: NextRequest) {
   const delay =
