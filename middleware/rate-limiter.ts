@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   CLIENT_ID,
   REQUEST_LIMIT,
@@ -6,44 +7,60 @@ import {
 } from "@/config/env-server";
 import { redis } from "@/lib";
 
-export function rateLimiterMiddleware(handler: (req: NextRequest) => void) {
+async function getRateLimitData(ip: string) {
+  const rateLimitData = await redis.hgetall(`${CLIENT_ID}:${ip}`);
+  return rateLimitData;
+}
+
+async function setRateLimitData(ip: string, count: number, lastReset: number) {
+  await redis.hmset(`${CLIENT_ID}:${ip}`, {
+    count: count.toString(),
+    lastReset: lastReset.toString(),
+  });
+}
+
+async function resetRateLimitData(ip: string) {
+  await redis.del(`${CLIENT_ID}:${ip}`);
+}
+
+export function rateLimiterMiddleware(
+  handler: (req: NextRequest) => Promise<NextResponse>,
+) {
   return async (req: NextRequest) => {
     const ip =
-      req.headers.get("X-Real-Ip") ??
-      req.headers.get("X-Forwarded-For") ??
-      "unknown_ip";
+      req.headers.get("X-Real-Ip") ?? req.headers.get("X-Forwarded-For");
 
-    const rateLimitKey = `${CLIENT_ID}:${ip}`;
+    if (!ip) {
+      return NextResponse.json(
+        { error: "Unable to determine IP address" },
+        { status: 400 },
+      );
+    }
 
-    const currentTime = Date.now();
+    const rateLimitData = await getRateLimitData(ip);
+    let count = 0;
+    let lastReset = Date.now();
 
-    const multi = redis.multi();
-    multi.hmget(rateLimitKey, "count", "lastReset");
-    multi.expire(rateLimitKey, REQUEST_WINDOW_MS / 1000);
+    if (rateLimitData.count && rateLimitData.lastReset) {
+      count = parseInt(rateLimitData.count, 10);
+      lastReset = parseInt(rateLimitData.lastReset, 10);
+    }
 
-    const [, result] = (await multi.exec()) as unknown as [
-      unknown,
-      (string | null)[],
-    ];
+    if (Date.now() - lastReset > REQUEST_WINDOW_MS) {
+      count = 0;
+      lastReset = Date.now();
+      await resetRateLimitData(ip);
+    }
 
-    const [count, lastReset] = result;
-
-    const countNum = parseInt(count ?? "0", 10);
-    const lastResetNum = parseInt(lastReset ?? `${currentTime}`, 10);
-
-    if (currentTime - lastResetNum > REQUEST_WINDOW_MS) {
-      await redis.hmset(rateLimitKey, {
-        count: 1,
-        lastReset: currentTime,
-      });
-    } else if (countNum >= REQUEST_LIMIT) {
+    if (count >= REQUEST_LIMIT) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 },
       );
-    } else {
-      await redis.hincrby(rateLimitKey, "count", 1);
     }
+
+    count += 1;
+    await setRateLimitData(ip, count, lastReset);
 
     return handler(req);
   };
